@@ -1,22 +1,37 @@
-beautifulsoup4>=4.12
-tavily-python>=0.3
-python-dotenv>=1.0
-pytest>=8.2
-pypdf>=3.0.0
+# ============================================
+# YASAA VISION - REQUIREMENTS
+# Python 3.13.5 ile test edilmiştir
+# ============================================
 
-langchain>=0.3
-langgraph>=0.2
-langchainhub>=0.1
-langchain-community>=0.3
-langchain-chroma>=0.2
-langchain-openai>=0.2
-langchain-google-genai>=2.0
+# --- Core Utilities ---
+beautifulsoup4>=4.12          # HTML/XML parsing
+python-dotenv>=1.0            # .env dosyası yönetimi
+pytest>=8.2                   # Test framework
 
-# API
+# --- PDF Processing ---
+pypdf>=3.0.0                  # PDF okuma (basit metin)
+pymupdf>=1.24.0               # PDF işleme (fitz) - metin + görsel çıkarma
 
-# UI
-streamlit>=1.30.0
-# Database
-chromadb>=0.4.0
-# Deployment
+# --- LangChain Ecosystem ---
+langchain>=0.3                # Ana LangChain framework
+langgraph>=0.2                # Multi-agent graph yapısı
+langchainhub>=0.1             # Prompt template hub
+langchain-community>=0.3      # Community integrations
+langchain-chroma>=0.2         # ChromaDB entegrasyonu
+langchain-openai>=0.2         # OpenAI entegrasyonu (GPT-4o, Embeddings)
+langchain-google-genai>=2.0   # Google Gemini entegrasyonu
+langchain-mongodb>=0.2        # MongoDB Atlas Vector Search
 
+# --- AI & Search ---
+tavily-python>=0.3            # Tavily arama API
+
+# --- Database ---
+chromadb>=0.4.0               # ChromaDB (local vector DB)
+pymongo>=4.6.0                # MongoDB Python driver
+
+# --- UI ---
+streamlit>=1.30.0             # Web arayüzü
+
+# --- Deployment (ileride eklenecek) ---
+# gunicorn>=21.0              # Production WSGI server
+# docker                       # Containerization
