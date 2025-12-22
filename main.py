@@ -28,8 +28,8 @@ from typing import Optional  # Type hints için
 from dotenv import load_dotenv  # .env dosyası okuma
 
 # Kendi modüllerimiz
-from app.agent.graph import build_graph  # Ana graph
-from app.agent.state import AgentState  # State tipi
+from App.agent.graph import build_graph  # Ana graph
+from App.agent.state import AgentState  # State tipi
 
 
 # ============================================

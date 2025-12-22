@@ -1,9 +1,9 @@
 """
 ============================================
-Boncuk VISION - Persona Node (Abla)
+YASAA VISION - Persona Node (Abla)
 ============================================
 Bu düğüm, toplanan tüm verileri alır ve
-"Boncuk Abla" personası ile kullanıcıya sunar.
+"Yasaa Abla" personası ile kullanıcıya sunar.
 
 Görev:
 - Gözcü'nün teknik raporunu al
@@ -25,25 +25,27 @@ Tarih: 2024
 # ============================================
 # IMPORTS - Gerekli Kütüphaneler
 # ============================================
-import os  # Environment değişkenleri için
-import logging  # Profesyonel loglama
-from typing import Dict, Any, List  # Type hints için
+import os                                      # Environment değişkenleri için
+import logging                                 # Profesyonel loglama
+from typing import Dict, Any, List             # Type hints için
 
-from dotenv import load_dotenv  # .env dosyası okuma
-from langchain_openai import ChatOpenAI  # GPT-4o modeli
-from langchain_core.messages import (  # Mesaj formatları
+from dotenv import load_dotenv                 # .env dosyası okuma
+from langchain_openai import ChatOpenAI        # GPT-4o modeli
+from langchain_core.messages import (          # Mesaj formatları
     SystemMessage,
     HumanMessage
 )
 
 # Kendi modüllerimiz
-from app.agent.state import AgentState
+from App.agent.state import AgentState
+
 
 # ============================================
 # LOGGING AYARLARI
 # ============================================
 # Bu modül için özel logger oluştur
 logger = logging.getLogger(__name__)
+
 
 # ============================================
 # ENVIRONMENT DEĞİŞKENLERİ
@@ -90,75 +92,230 @@ def _get_persona_llm() -> ChatOpenAI:
 
 
 # ============================================
-# ABLA PERSONA PROMPT'U
+# ABLA PERSONA PROMPT'U (GÜÇLENDİRİLMİŞ)
 # ============================================
+# Bu prompt Abla'ya:
+# 1. Kesin ifadeler kullanmayı (EĞER YASAK!)
+# 2. Başlık atmamayı
+# 3. Uzun ve detaylı cevap vermeyi
+# 4. El raporuna TAM BAĞLILIK ile konuşmayı öğretir
 ABLA_SYSTEM_PROMPT: str = """
-Sen 'Boncuk Abla'sın. Geleneksel Türk falcı ağzıyla konuşan, hem mistik hem de bilimsel el falı (Kiromansi) bilen bir yapay zeka asistanısın.
+Sen 'Yasaa Abla'sın. Profesyonel, mistik ve bilimsel el falı (Kiromansi) uzmanısın.
 
 ## 🎭 KİMLİĞİN
-- Adın: Boncuk Abla
+- Adın: Yasaa Abla
 - Uzmanlık: Kiromansi (El Falı), özellikle Benham ve St. Germain ekolü
-- Deneyim: Yıllardır el okuyan, binlerce ele bakan tecrübeli bir falcı
+- Deneyim: 30 yıldır el okuyan, on binlerce ele bakan usta bir falcı
+
+## ⛔ KESİN YASAKLAR (BUNLARA UYMAZSAN SİSTEM ÇÖKER!)
+
+### YASAK 1: "EĞER" KELİMESİ VE ŞART KİPİ
+❌ ASLA şunları söyleme:
+- "Eğer elin kareyse..."
+- "Eğer hayat çizgin uzunsa..."
+- "Şayet parmakların sivri ise..."
+- "...olabilir", "...görünüyor", "...gibi duruyor"
+
+✅ BUNUN YERİNE kesin konuş:
+- "Senin elin KARE. Bu demek ki..."
+- "Hayat çizgin ÇOK UZUN ve DERİN. Bu gösteriyor ki..."
+- "Parmakların SİVRİ UÇLU. Yani sen..."
+
+⚠️ NEDEN? Çünkü sana gelen teknik rapor zaten elin nasıl olduğunu söylüyor. 
+Sen varsayım yapmıyorsun, GÖRDÜĞÜNÜ söylüyorsun. Falcı dediğin "Görüyorum ki böylesin!" der.
+
+### YASAK 2: BAŞLIK VE BÖLÜM ATLAMA
+❌ ASLA şunları yazma:
+- "Giriş:", "Sonuç:", "Özet:"
+- "1.", "2.", "3." gibi numaralı listeler
+- "Sandviç Tekniği", "Övgü Bölümü", "Uyarı Bölümü"
+- "El Analizi:", "Kariyer:", "Aşk:" gibi başlıklar
+- Bullet point veya madde işaretleri
+
+✅ BUNUN YERİNE akıcı bir sohbet yaz:
+Sanki karşında oturan birine konuşur gibi, paragraflar halinde, doğal bir dille anlat.
+Bir arkadaşına anlatır gibi yaz, akademik makale gibi değil.
+
+### YASAK 3: KISA CEVAP
+❌ 2-3 paragrafla bitirme
+✅ EN AZ 5-6 paragraf, doyurucu ve detaylı bir analiz yap
+
+## 🎯 ANA GÖREVİN
+Kullanıcının EL ANALİZİNDEKİ GERÇEK bulguları (el tipi, çizgiler, tepeler, parmaklar) kullanarak, 
+kullanıcının SORUSUNA kişiselleştirilmiş, UZUN ve DETAYLI cevap ver.
+
+**STRATEJİN:**
+
+1. **Rapordaki Gerçekleri Kullan:**
+   - Rapor "Square hand" diyorsa → "Senin elin KARE TİPİNDE" de
+   - Rapor "Life line is deep" diyorsa → "Hayat çizgin ÇOK DERİN" de
+   - Asla tahmin yapma, raporda NE YAZIYORSA onu söyle
+
+2. **Her Bulguyu Yorumla:**
+   - Sadece "Akıl çizgin uzun" deme
+   - "Akıl çizgin uzun, bu senin analitik düşünce yeteneğinin güçlü olduğunu gösteriyor. Benham'ın 'The Laws of Scientific Hand Reading' kitabında da belirttiği gibi, uzun akıl çizgisi olan insanlar detaylara dikkat eder ve mantıklı kararlar alır. Senin için bu demek oluyor ki..." şeklinde AÇIKLA
+
+3. **Soruyla Bağlantı Kur:**
+   - Kullanıcı "Kariyer" sorduysa → Akıl Çizgisi, Parmak Şekli, Başparmak gücünden yola çık
+   - Kullanıcı "Aşk/Evlilik" sorduysa → Kalp Çizgisi, Venüs Tepesi'nden yola çık
+   - Her zaman NEDEN bu sonuca vardığını eldeki işaretlerle kanıtla
+
+4. **Karakter Analizi Yap:**
+   - El bulgularından kişilik özelliklerini çıkar
+   - Bu özelliklerin sorulan konuyla ilişkisini ayrıntılı kur
 
 ## 🗣️ TONUN VE ÜSLUBUN
-1. **Samimi ve Sıcak:**
-   - "Kuzum", "Aslanım", "Canımın içi", "Güzel yavrum" gibi hitaplar kullan
-   - Mesafeli değil, sanki karşında tanıdığın biri varmış gibi konuş
+1. **Samimi ve Sıcak ama Otoriter:**
+   - "Bak kuzum", "Dinle beni", "Şimdi sana bir şey söyleyeceğim"
+   - "Kuzum", "Aslanım", "Canımın içi", "Güzel yavrum"
+   - Sanki yıllardır tanıdığın birine konuşur gibi
 
-2. **Bilgili ama Ulaşılabilir:**
-   - Teknik terimleri kullan ama açıkla
-   - "Hayat çizgin" de, "Life Line" deme
-   - Kitaplardan referans ver: "Benham kitabında da yazar ki..."
+2. **Kesin ve Net Konuş:**
+   - "Görüyorum ki sen...", "Elin bana diyor ki...", "Bu çizgi açıkça gösteriyor..."
+   - Tereddüt yok, sen uzmansın, gördüğünü söylüyorsun
 
-3. **Sandviç Tekniği (ÖNEMLİ!):**
-   - 🍞 ÖNCE: Güzel bir özelliğinden bahset (övgü)
-   - 🥬 SONRA: Dikkat etmesi gereken noktayı söyle (uyarı)
-   - 🍞 EN SON: Motive edici bir cümleyle bitir (umut)
+3. **Referans Ver:**
+   - "Benham kitabının şu bölümünde de yazar ki..."
+   - "Kiromansi biliminde bu işaret şu anlama gelir..."
 
-4. **Dobra ama Kırıcı Değil:**
-   - Kötü bir şey görsen bile yıkıcı olma
-   - "Şurada biraz zorluk var ama..." şeklinde yumuşat
-   - Asla "Başına kötü şeyler gelecek" gibi kehanetlerde bulunma
+4. **Akıcı Sohbet:**
+   - Paragraflar arası geçişler doğal olsun
+   - Bir konudan diğerine akıcı geç
+   - Sonunda motive edici bir kapanış yap
 
-5. **Mistik Hava:**
-   - Ara sıra "Maşallah", "İnşallah", "Allah korusun" gibi ifadeler kullan
-   - Ama batıl inançlara değil, gözleme dayalı konuş
-
-## ⚠️ YAPMAMAN GEREKENLER
+## ⚠️ DİĞER YASAKLAR
 - Asla "Ben bir yapay zekayım" deme
 - Kesin tarih veya isim verme ("2024'te evleneceksin" ❌)
 - Sağlık teşhisi koyma ("Kalp hastalığın var" ❌)
 - Ölüm, kaza gibi korkutucu kehanetler yapma
 - İngilizce terim kullanma (Head Line → Akıl Çizgisi)
-
-## 📝 CEVAP FORMATI
-1. Kısa bir selamlama
-2. Elin genel değerlendirmesi (el tipi)
-3. Çizgilerin yorumu (en az 3 ana çizgi)
-4. Tepelerin/dağların yorumu
-5. Genel değerlendirme ve tavsiyeler
-6. Motive edici kapanış
+- Soruyu görmezden gelip sadece genel el yorumu yapma
 
 ## 🌍 DİL
 - Sana gelen veriler İNGİLİZCE olacak (teknik analiz)
 - Sen bunları TÜRKÇE yorumlayacaksın
-- Akıcı, doğal Türkçe kullan
+- Akıcı, doğal, samimi Türkçe kullan
+- EN AZ 500-700 kelime uzunluğunda cevap ver
 """
 
 
 # ============================================
-# KULLANICI İÇERİĞİ ŞABLONU
+# KULLANICI SORUSUNU ÇIKARMA
+# ============================================
+def _extract_user_question(messages: list) -> str:
+    """
+    State'deki messages listesinden kullanıcının sorusunu çıkarır.
+
+    Args:
+        messages: State'deki mesaj listesi
+
+    Returns:
+        str: Kullanıcının sorusu veya varsayılan metin
+
+    Desteklenen formatlar:
+    - HumanMessage objesi
+    - Tuple: ("user", "soru metni")
+    - Dict: {"role": "user", "content": "soru metni"}
+    """
+    # Varsayılan: Soru yoksa genel yorum iste
+    default_question = "Genel bir el falı yorumu istiyorum."
+
+    # Mesaj listesi boşsa
+    if not messages or len(messages) == 0:
+        return default_question
+
+    # Son mesajı al (en güncel soru)
+    last_message = messages[-1]
+
+    # Format 1: LangChain HumanMessage objesi
+    if hasattr(last_message, 'content') and last_message.content:
+        return last_message.content
+
+    # Format 2: Tuple ("user", "soru metni")
+    if isinstance(last_message, tuple) and len(last_message) >= 2:
+        role, content = last_message[0], last_message[1]
+        if role == "user" and content:
+            return content
+
+    # Format 3: Dict {"role": "user", "content": "soru metni"}
+    if isinstance(last_message, dict):
+        if last_message.get("role") == "user" and last_message.get("content"):
+            return last_message["content"]
+
+    return default_question
+
+
+# ============================================
+# SOHBET GEÇMİŞİNİ METİNE DÖNÜŞTÜRME
+# ============================================
+def _build_chat_history_text(messages: list) -> str:
+    """
+    State'deki mesaj listesini okunabilir metin formatına çevirir.
+
+    Args:
+        messages: State'deki mesaj listesi
+
+    Returns:
+        str: Formatlanmış sohbet geçmişi
+
+    Bu fonksiyon Abla'nın önceki konuşmaları hatırlamasını sağlar.
+    Son 6 mesajı alır ki context window dolmasın.
+    """
+    from langchain_core.messages import HumanMessage as HM, AIMessage as AM
+
+    if not messages or len(messages) == 0:
+        return "Bu ilk konuşmamız."
+
+    chat_lines = []
+
+    # Son 6 mesajı al (hafıza için yeterli, token için güvenli)
+    recent_messages = messages[-6:]
+
+    for msg in recent_messages:
+        # LangChain HumanMessage
+        if isinstance(msg, HM) or (hasattr(msg, '__class__') and msg.__class__.__name__ == 'HumanMessage'):
+            chat_lines.append(f"Kullanıcı: {msg.content}")
+        # LangChain AIMessage
+        elif isinstance(msg, AM) or (hasattr(msg, '__class__') and msg.__class__.__name__ == 'AIMessage'):
+            # Abla'nın cevabını kısalt (çok uzun olabilir)
+            short_response = msg.content[:300] + "..." if len(msg.content) > 300 else msg.content
+            chat_lines.append(f"Abla: {short_response}")
+        # Tuple format
+        elif isinstance(msg, tuple) and len(msg) >= 2:
+            role, content = msg[0], msg[1]
+            if role == "user":
+                chat_lines.append(f"Kullanıcı: {content}")
+            else:
+                short_content = content[:300] + "..." if len(content) > 300 else content
+                chat_lines.append(f"Abla: {short_content}")
+
+    return "\n".join(chat_lines) if chat_lines else "Bu ilk konuşmamız."
+
+
+# ============================================
+# KULLANICI İÇERİĞİ ŞABLONU (GÜÇLENDİRİLMİŞ)
 # ============================================
 def _build_user_content(
-        vision_report: str,
-        book_references: List[str]
+    vision_report: str,
+    book_references: List[str],
+    user_question: str,
+    chat_history: str = ""
 ) -> str:
     """
     Abla'ya gönderilecek kullanıcı içeriğini oluşturur.
 
+    Artık şunları içeriyor:
+    - Sohbet geçmişi (hafıza)
+    - Kullanıcı sorusu
+    - Teknik analiz raporu
+    - Kitap referansları
+    - Güçlendirilmiş talimatlar
+
     Args:
         vision_report: Gözcü'nün teknik analiz raporu
         book_references: Kitaplardan bulunan referanslar
+        user_question: Kullanıcının sorusu
+        chat_history: Önceki sohbet geçmişi (opsiyonel)
 
     Returns:
         str: Formatlanmış kullanıcı içeriği
@@ -167,20 +324,43 @@ def _build_user_content(
     if book_references:
         references_text = "\n\n---\n\n".join(book_references)
     else:
-        references_text = "Kitaplarda bu özellikler hakkında spesifik bir referans bulunamadı. Genel bilginle yorum yap."
+        references_text = "Kitaplarda bu özellikler hakkında spesifik referans bulunamadı. Genel kiromansi bilginle yorum yap."
 
     # Şablonu doldur
     content = f"""
-## 📋 GÖZCÜ'NÜN TEKNİK ANALİZİ (İngilizce)
+## 📜 SOHBET GEÇMİŞİ (Önceki konuşmalarınız - BAĞLAMI KORU!)
+{chat_history}
+
+---
+
+## 🎯 KULLANICININ ŞU ANKİ SORUSU
+"{user_question}"
+
+---
+
+## 📋 EL ANALİZ RAPORU (KESİN VERİ - BUNA TAM BAĞLI KAL!)
 {vision_report}
 
-## 📚 KİTAPLARDAN BULUNAN REFERANSLAR
+---
+
+## 📚 AKADEMİK KANITLAR (Kitaplardan)
 {references_text}
 
 ---
 
-Yukarıdaki teknik verileri ve kitap referanslarını kullanarak, bu kişinin elini Boncuk Abla olarak yorumla.
-Sandviç tekniğini unutma: Övgü → Uyarı → Motivasyon
+## ⚠️ KRİTİK TALİMATLAR (MUTLAKA UYULMALI!)
+
+1. **EĞER KULLANMA:** Raporda "Square hand" yazıyorsa "Senin elin KARE" de, "Eğer elin kareyse" DEME!
+
+2. **BAŞLIK ATMA:** "Giriş:", "Sonuç:", "1.", "2." gibi başlıklar kullanma. Akıcı sohbet yaz.
+
+3. **UZUN VE DETAYLI YAZ:** En az 5-6 paragraf, doyurucu bir analiz yap. Kısa cevap verme!
+
+4. **RAPORA BAĞLI KAL:** Raporda ne yazıyorsa onu söyle. Varsayım yapma, gördüğünü anlat.
+
+5. **SOHBET GEÇMİŞİNİ HATIRLA:** Kullanıcı daha önce ne sorduysa, ona atıfta bulun.
+
+Haydi Abla, bu verilere dayanarak kullanıcının sorusuna UZUN ve DETAYLI bir cevap ver!
 """
 
     return content
@@ -193,9 +373,8 @@ def persona_node(state: AgentState) -> Dict[str, Any]:
     """
     Toplanan tüm teknik verileri 'Abla' personasıyla kullanıcıya sunar.
 
-    Bu fonksiyon LangGraph tarafından çağrılır.
-    Gözcü raporu ve kitap referanslarını alır,
-    sıcak ve samimi bir Türkçe yorum üretir.
+    ÖNEMLİ: Bu node artık kullanıcının SORUSUNA özel cevap veriyor!
+    Sadece el yorumu yapmıyor, soruyu el bulgularıyla ilişkilendiriyor.
 
     Args:
         state: Mevcut graph state'i (AgentState)
@@ -206,11 +385,12 @@ def persona_node(state: AgentState) -> Dict[str, Any]:
             - error_message: Hata varsa mesaj
 
     Flow:
-        1. State'den vision_report ve retrieved_documents al
-        2. System prompt (Abla personası) hazırla
-        3. User content (teknik veri + referanslar) hazırla
-        4. GPT-4o'ya gönder
-        5. Türkçe yorumu state'e ekle
+        1. State'den vision_report, retrieved_documents ve messages al
+        2. Kullanıcı sorusunu çıkar
+        3. System prompt (Abla personası) hazırla
+        4. User content (soru + teknik veri + referanslar) hazırla
+        5. GPT-4o'ya gönder
+        6. Türkçe yorumu state'e ekle
     """
     logger.info("--- 🗣️ ABLA NODE: Fal Yazılıyor... ---")
 
@@ -219,6 +399,7 @@ def persona_node(state: AgentState) -> Dict[str, Any]:
     # ==========================================
     vision_report = state.get("visual_analysis_report", "")
     book_references = state.get("retrieved_documents", [])
+    messages = state.get("messages", [])  # Kullanıcı mesajları
 
     # Kontrol: En azından gözcü raporu olmalı
     if not vision_report:
@@ -226,14 +407,23 @@ def persona_node(state: AgentState) -> Dict[str, Any]:
         return {
             "final_response": None,
             "error_message": "Kuzum, elini göremedim ki falına bakayım. "
-                             "Bir el fotoğrafı atar mısın?"
+                           "Bir el fotoğrafı atar mısın?"
         }
 
     logger.info(f"   📝 Gözcü raporu: {len(vision_report)} karakter")
     logger.info(f"   📚 Kitap referansı: {len(book_references)} adet")
 
     # ==========================================
-    # ADIM 2: Modeli Hazırla
+    # ADIM 2: Kullanıcı Sorusunu ve Sohbet Geçmişini Çıkar
+    # ==========================================
+    user_question = _extract_user_question(messages)
+    chat_history = _build_chat_history_text(messages)  # YENİ: Sohbet geçmişi
+
+    logger.info(f"   🎯 Kullanıcı sorusu: '{user_question[:50]}...'")
+    logger.info(f"   📜 Sohbet geçmişi: {len(messages)} mesaj")
+
+    # ==========================================
+    # ADIM 3: Modeli Hazırla
     # ==========================================
     try:
         llm = _get_persona_llm()
@@ -246,25 +436,30 @@ def persona_node(state: AgentState) -> Dict[str, Any]:
         }
 
     # ==========================================
-    # ADIM 3: Mesajları Hazırla
+    # ADIM 4: Mesajları Hazırla
     # ==========================================
-    # System message: Abla personası
+    # System message: Abla personası (güçlendirilmiş)
     system_message = SystemMessage(content=ABLA_SYSTEM_PROMPT)
 
-    # User message: Teknik veri + Referanslar
-    user_content = _build_user_content(vision_report, book_references)
+    # User message: Sohbet geçmişi + Soru + Teknik veri + Referanslar
+    user_content = _build_user_content(
+        vision_report=vision_report,
+        book_references=book_references,
+        user_question=user_question,
+        chat_history=chat_history  # YENİ: Sohbet geçmişi eklendi!
+    )
     user_message = HumanMessage(content=user_content)
 
-    messages = [system_message, user_message]
+    messages_payload = [system_message, user_message]
 
     logger.debug(f"   📨 User content uzunluğu: {len(user_content)} karakter")
 
     # ==========================================
-    # ADIM 4: API Çağrısı
+    # ADIM 5: API Çağrısı
     # ==========================================
     try:
         logger.info("   🔄 Abla düşünüyor...")
-        response = llm.invoke(messages)
+        response = llm.invoke(messages_payload)
         abla_response = response.content
         logger.info("   ✅ Fal yorumu hazırlandı")
 
@@ -273,11 +468,11 @@ def persona_node(state: AgentState) -> Dict[str, Any]:
         return {
             "final_response": None,
             "error_message": "Kuzum nazar değdi galiba, dilim bağlandı. "
-                             "Bir dakika sonra tekrar dener misin?"
+                           "Bir dakika sonra tekrar dener misin?"
         }
 
     # ==========================================
-    # ADIM 5: Sonucu Döndür
+    # ADIM 6: Sonucu Döndür
     # ==========================================
     # Cevabın uzunluğunu logla
     logger.info(f"   📜 Yorum uzunluğu: {len(abla_response)} karakter")
@@ -308,17 +503,17 @@ def _test_persona_node():
         "user_image_bytes": None,
         "visual_analysis_report": """
         HAND SHAPE: Square type based on equal palm width and finger length.
-
+        
         PRIMARY LINES:
         - Life Line: Deep and widely curved around Mount of Venus. No breaks or islands.
         - Head Line: Straight, medium length, ending near Mount of Moon. Slight fork at end.
         - Heart Line: Curved upward, terminating under Mount of Jupiter. Deep and clear.
-
+        
         MOUNTS:
         - Mount of Venus: Padded (prominent)
         - Mount of Jupiter: Raised
         - Mount of Moon: Normal
-
+        
         FINGERS:
         - Thumb setting: Medium
         - Finger tips: Square

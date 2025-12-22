@@ -13,6 +13,9 @@ Görev:
 Çıktı:
 - is_hand_detected: El tespit edildi mi?
 - visual_analysis_report: Teknik analiz raporu
+
+Yazar: Ahmet Ruçhan
+Tarih: 2024
 ============================================
 """
 
@@ -28,7 +31,7 @@ from langchain_openai import ChatOpenAI        # GPT-4o modeli
 from langchain_core.messages import HumanMessage  # Mesaj formatı
 
 # Kendi modüllerimiz
-from app.agent.state import AgentState
+from App.agent.state import AgentState
 
 
 # ============================================
@@ -55,80 +58,140 @@ VISION_MAX_TOKENS: int = int(os.getenv("VISION_MAX_TOKENS", "1000"))
 # ============================================
 # MODEL BAŞLATMA
 # ============================================
-
 def _get_vision_llm() -> ChatOpenAI:
+    """
+    GPT-4o Vision modelini başlatır.
 
+    Returns:
+        ChatOpenAI: Yapılandırılmış model instance'ı
+
+    Raises:
+        ValueError: API key eksikse
+    """
     if not OPENAI_API_KEY:
         raise ValueError("❌ OPENAI_API_KEY .env dosyasında bulunamadı!")
 
     return ChatOpenAI(
-        model=VISION_MODEL,
-        api_key=OPENAI_API_KEY,
-        max_tokens=VISION_MAX_TOKENS
+        model=VISION_MODEL,           # gpt-4o (vision destekli)
+        api_key=OPENAI_API_KEY,       # API anahtarı
+        max_tokens=VISION_MAX_TOKENS  # Maksimum çıktı uzunluğu
     )
 
 
 # ============================================
-# VISION PROMPT ŞABLONU
+# VISION PROMPT ŞABLONU (GÜÇLENDİRİLMİŞ)
 # ============================================
-# Bu prompt GPT-4o'ya "neye bakacağını" söyler
-# DİKKAT: Yorum yapma, sadece gözlem yap!
-
+# Bu prompt GPT-4o'ya "neye bakacağını" ve
+# NASIL ifade edeceğini söyler
+# DİKKAT: Kesin ifadeler kullan, "eğer/belki" YASAK!
 VISION_ANALYSIS_PROMPT: str = """
-**ROLE:** Expert Chiromancy (Palmistry) Morphologist.
+**ROLE:** Expert Chiromancy (Palmistry) Morphologist with 30 years of experience.
 
-**TASK:** Analyze the user's hand image accurately and objectively.
+**TASK:** Analyze the provided hand image and generate a HIGHLY DETAILED, DEFINITIVE technical report.
+
+**STRICT LANGUAGE RULES (CRITICAL!):**
+1. **BE 100% DEFINITIVE:** Do NOT use uncertain words like:
+   - ❌ "appears to be", "might be", "looks like", "seems", "possibly", "could be", "if"
+   - ✅ Use "IS", "ARE", "HAS", "SHOWS" - speak with absolute certainty
+   - BAD: "The fingers appear to be conic shaped."
+   - GOOD: "The fingers ARE Conic shaped with smooth, rounded tips and tapered ends."
+
+2. **MAXIMUM DETAIL:** Do not just list features. Describe:
+   - Exact measurements relative to palm
+   - Texture and skin quality
+   - Depth and width of every line
+   - Specific angles and curves
+   - Color variations if visible
+
+3. **NO INTERPRETATIONS:** Only physical descriptions. No meanings, no advice.
+
+**COMPREHENSIVE ANALYSIS CHECKLIST:**
+
+## 1. HAND SHAPE (Be specific about WHY)
+- Exact classification: Square, Spatulate, Philosophic, Conic, Psychic, Elementary, or Mixed
+- Palm width compared to length (ratio)
+- Overall hand size relative to body (if visible)
+- Flesh consistency: Soft/Flabby, Medium/Elastic, Hard/Firm
+
+## 2. FINGERS (Each finger individually)
+- **Length:** Relative to palm length, relative to each other
+- **Tip Shapes:** Square, Pointed/Conic, Spatulate, Mixed
+- **Joints:** Smooth or Knotty (Philosophic knots vs Practical knots)
+- **Setting on Palm:** Even line, arch shape, or irregular
+- **Spaces Between:** When held naturally - wide gaps or close together
+- **THUMB (Critical):**
+  - Setting: High, Medium, or Low on palm
+  - Flexibility: Stiff (unbending) or Supple (bends back easily)
+  - First Phalange (Will) vs Second Phalange (Logic) ratio
+  - Angle of opening from hand
+
+## 3. MAJOR LINES (Extremely detailed)
+
+**LIFE LINE:**
+- Starting point: Exact location between thumb and index finger
+- Path: Close to thumb, wide curve around Venus, or moderate
+- Ending point: Where exactly does it terminate?
+- Depth: Deep/Medium/Faint/Chained
+- Width: Broad or Fine
+- Special Marks: Islands, breaks, chains, branches, crosses, stars
+- Sister Line present? (Mars Line)
+
+**HEAD LINE:**
+- Starting point: Joined with Life Line? Separated? How much gap?
+- Direction: Straight across palm, sloping toward Moon, or rising
+- Length: Reaches Mercury? Stops at Apollo? Short?
+- Ending: Clean end, fork (Writer's Fork), multiple branches
+- Depth and clarity throughout its length
+- Special marks: Islands (concentration issues), breaks, chains
+
+**HEART LINE:**
+- Starting point: Under Mercury finger
+- Termination: Under Jupiter, between Jupiter-Saturn, under Saturn, or forked
+- Curvature: Straight, curved upward, deeply curved
+- Depth: Deep (passionate), Medium, Faint (reserved)
+- Branches: Upward branches, downward branches, clean
+- Girdle of Venus present above it?
+
+**FATE LINE (if present):**
+- Starting point: Wrist, Life Line, Moon mount, or middle of palm
+- Path: Straight, curved, broken, multiple lines
+- Ending point: Saturn, Jupiter, or other
+
+## 4. MOUNTS (Rate each: Flat/Normal/Raised/Padded/Overdeveloped)
+- **Venus** (base of thumb): Size, firmness, boundaries
+- **Jupiter** (under index): Elevation, size
+- **Saturn** (under middle): Presence, development
+- **Apollo/Sun** (under ring): Prominence
+- **Mercury** (under little): Development
+- **Moon/Luna** (opposite thumb, lower): Size, padding
+- **Mars Positive** (under Jupiter, inner palm)
+- **Mars Negative** (under Mercury, inner palm)
+- **Plain of Mars** (center of palm): Hollow or filled
+
+## 5. SKIN TEXTURE & ADDITIONAL FEATURES
+- Skin quality: Fine/Silky, Medium, Coarse/Rough
+- Line density: Many fine lines (sensitive) or few main lines (simple nature)
+- Color: Pink, pale, red, yellow tones
+- Nails (if visible): Shape, moons, ridges
 
 **OUTPUT FORMAT:**
-Please extract and describe these technical details in a structured way:
+Write a DENSE, CONTINUOUS technical narrative of approximately 400-500 words.
+Do NOT use bullet points or headers in your output.
+Write it as flowing professional prose, as if dictating a medical report.
+Every statement must be DEFINITIVE - you are the expert, speak with authority.
 
-1. **HAND SHAPE:**
-   - Type: (Square, Spatulate, Conic, Psychic, Philosophic, Elementary, Mixed)
-   - Reasoning: (Based on palm width vs finger length ratio)
-
-2. **PRIMARY LINES:**
-   - **Life Line:** 
-     * Length: (Long/Medium/Short)
-     * Depth: (Deep/Medium/Faint)  
-     * Curvature: (Widely curved around Venus / Straight / Close to thumb)
-     * Special marks: (Islands, breaks, forks, branches - if any)
-
-   - **Head Line:**
-     * Direction: (Sloping toward Moon / Straight across / Rising toward fingers)
-     * Length: (Reaches Mercury / Stops at Apollo / Short)
-     * Fork at end: (Yes/No)
-
-   - **Heart Line:**
-     * Termination: (Under Jupiter / Between Jupiter-Saturn / Under Saturn)
-     * Curvature: (Curved upward / Straight / Curved downward)
-     * Depth: (Deep/Medium/Faint)
-
-3. **MOUNTS (Prominence Level: Flat/Normal/Raised/Padded):**
-   - Mount of Venus (thumb base)
-   - Mount of Jupiter (under index finger)
-   - Mount of Saturn (under middle finger)
-   - Mount of Apollo (under ring finger)
-   - Mount of Mercury (under little finger)
-   - Mount of Moon (opposite thumb, lower palm)
-
-4. **FINGERS:**
-   - Thumb setting: (High/Medium/Low on palm)
-   - Finger tips: (Pointed/Conic/Square/Spatulate)
-   - Notable features: (Long/short fingers, gaps between fingers)
-
-**CRITICAL INSTRUCTIONS:**
-- Do NOT interpret meanings (e.g., "You will be rich", "You will travel")
-- Do NOT give advice or predictions
-- ONLY describe physical features you observe
-- If the image is NOT a clear hand photo, respond with exactly: "NOT_A_HAND"
-- If image quality is poor but it's a hand, do your best and note "LOW_QUALITY"
+**IMPORTANT - HAND DETECTION RULES:**
+- ONLY respond with "NOT_A_HAND" if the image clearly shows something completely different (like a car, building, animal, text document)
+- If you can see ANY hand or palm features AT ALL, even partially or at an angle, PROCEED WITH ANALYSIS
+- If image quality is poor but it's a hand, do your best and note "LOW_QUALITY" at the start
+- When in doubt, ANALYZE - err on the side of providing analysis rather than rejecting
+- Hands photographed at angles, with objects in background, or partially visible should still be analyzed
 """
 
 
 # ============================================
 # ANA NODE FONKSİYONU
 # ============================================
-
 def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
     """
     Kullanıcının gönderdiği el fotoğrafını analiz eder.
@@ -157,15 +220,15 @@ def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
     # ==========================================
     # ADIM 1: Resim Verisini Al
     # ==========================================
-
     image_data = state.get("user_image_bytes")
 
+    # Resim yoksa - kullanıcı sadece sohbet ediyor olabilir
     if not image_data:
         logger.warning("   ⚠️ Resim bulunamadı, görsel analiz atlanıyor.")
         return {
             "is_hand_detected": False,
             "visual_analysis_report": None,
-            "error_message": None
+            "error_message": None  # Bu bir hata değil, sadece resim yok
         }
 
     logger.info(f"   📸 Resim verisi alındı ({len(image_data)} karakter)")
@@ -173,7 +236,6 @@ def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
     # ==========================================
     # ADIM 2: GPT-4o Vision'ı Hazırla
     # ==========================================
-
     try:
         llm = _get_vision_llm()
         logger.info(f"   🤖 Model yüklendi: {VISION_MODEL}")
@@ -189,11 +251,9 @@ def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
     # ADIM 3: Mesajı Hazırla ve Gönder
     # ==========================================
     # LangChain formatında multimodal mesaj oluştur
-
     message = HumanMessage(
         content=[
             # Metin kısmı: Prompt
-
             {
                 "type": "text",
                 "text": VISION_ANALYSIS_PROMPT
@@ -211,7 +271,6 @@ def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
     # ==========================================
     # ADIM 4: API Çağrısı
     # ==========================================
-
     try:
         logger.info("   🔄 GPT-4o Vision API çağrısı yapılıyor...")
         response = llm.invoke([message])
@@ -231,14 +290,21 @@ def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
     # ADIM 5: Sonucu Değerlendir
     # ==========================================
 
-    # Durum 1: El değil
-    if "NOT_A_HAND" in analysis:
+    # Durum 1: El değil - SADECE cevap çok kısa ve NOT_A_HAND içeriyorsa
+    # Bu, model'in uzun bir analizde bu kelimeyi kullanmasını engelliyor
+    analysis_stripped = analysis.strip()
+    is_rejection = (
+        "NOT_A_HAND" in analysis_stripped and
+        len(analysis_stripped) < 100  # Kısa cevaplar = gerçek red
+    )
+
+    if is_rejection:
         logger.warning("   ❌ Gönderilen fotoğraf el değil")
         return {
             "is_hand_detected": False,
             "visual_analysis_report": None,
             "error_message": "Kuzum bu el fotoğrafı değil gibi görünüyor. "
-                             "Avuç içini düzgünce gösteren bir fotoğraf atar mısın?"
+                           "Avuç içini düzgünce gösteren bir fotoğraf atar mısın?"
         }
 
     # Durum 2: Düşük kalite ama el
@@ -266,7 +332,7 @@ def _test_vision_node():
     Vision node'u test etmek için yardımcı fonksiyon.
 
     Kullanım:
-        python -m app.agent.nodes.vision_node
+        python -m App.agent.nodes.vision_node
     """
     import base64
 
@@ -310,5 +376,3 @@ if __name__ == "__main__":
 
     # Testi çalıştır
     _test_vision_node()
-
-

@@ -32,7 +32,7 @@ from langchain_openai import OpenAIEmbeddings  # Embedding modeli
 from langchain_mongodb import MongoDBAtlasVectorSearch  # Vektör arama
 
 # Kendi modüllerimiz
-from app.agent.state import AgentState
+from App.agent.state import AgentState
 
 
 # ============================================

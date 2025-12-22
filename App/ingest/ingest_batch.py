@@ -371,9 +371,9 @@ if __name__ == "__main__":
         exit(1)
 
     # 2. PDF klasör yolunu belirle
-    # Not: Script app/ingest/ içinde, PDF'ler app/pdf_storage/ içinde
+    # Not: Script App/ingest/ içinde, PDF'ler App/pdf_storage/ içinde
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Script dizini
-    app_dir = os.path.dirname(script_dir)  # app dizini
+    app_dir = os.path.dirname(script_dir)  # App dizini
     pdf_folder = os.path.join(app_dir, PDF_FOLDER)  # PDF klasör yolu
 
     logger.info(f"📁 PDF Klasörü: {pdf_folder}")

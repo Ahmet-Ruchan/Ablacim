@@ -14,9 +14,9 @@ Her düğüm AgentState alır, işler ve güncellenmiş state döndürür.
 """
 
 # Düğümleri dışarıya aç (import kolaylığı için)
-from app.agent.nodes.vision_node import vision_analysis_node
-from app.agent.nodes.retrieval_node import retrieval_node
-from app.agent.nodes.persona_node import persona_node
+from App.agent.nodes.vision_node import vision_analysis_node
+from App.agent.nodes.retrieval_node import retrieval_node
+from App.agent.nodes.persona_node import persona_node
 
 # Tüm node'ları tek seferde import etmek için
 __all__ = [

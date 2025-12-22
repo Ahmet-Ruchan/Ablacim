@@ -35,10 +35,10 @@ from langgraph.graph import (  # LangGraph bileşenleri
 )
 
 # Kendi modüllerimiz
-from app.agent.state import AgentState  # State tanımı
-from app.agent.nodes.vision_node import vision_analysis_node  # Gözcü
-from app.agent.nodes.retrieval_node import retrieval_node  # Araştırmacı
-from app.agent.nodes.persona_node import persona_node  # Abla
+from App.agent.state import AgentState  # State tanımı
+from App.agent.nodes.vision_node import vision_analysis_node  # Gözcü
+from App.agent.nodes.retrieval_node import retrieval_node  # Araştırmacı
+from App.agent.nodes.persona_node import persona_node  # Abla
 
 # ============================================
 # LOGGING AYARLARI
@@ -98,11 +98,11 @@ def build_graph() -> StateGraph:
         Compiled StateGraph: Çalıştırılmaya hazır graph
 
     Kullanım:
-        >>> app = build_graph()
-        >>> result = app.invoke(initial_state)
+        >>> App = build_graph()
+        >>> result = App.invoke(initial_state)
 
     veya streaming için:
-        >>> for output in app.stream(initial_state):
+        >>> for output in App.stream(initial_state):
         ...     print(output)
     """
     logger.info("🧠 Graph oluşturuluyor...")
