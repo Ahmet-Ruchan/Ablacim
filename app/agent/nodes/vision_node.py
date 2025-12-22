@@ -202,7 +202,7 @@ def vision_analysis_node(state: AgentState) -> Dict[str, Any]:
             {
                 "type": "image_url",
                 "image_url": {
-                    "ur": f"data:image/jpeg;base64,{image_data}"
+                    "url": f"data:image/jpeg;base64,{image_data}"
                 }
             },
         ]
