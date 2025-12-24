@@ -54,8 +54,14 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
+import streamlit as st
+def get_secret(name: str):
+    return st.secrets.get(name) or os.getenv(name)
+
+
 # --- API Anahtarı ---
-OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY","")
+OPENAI_API_KEY: str = get_secret("OPENAI_API_KEY")
+#OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY","")
 
 # --- Model Ayarları ---
 PERSONA_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o")  # Aynı model
