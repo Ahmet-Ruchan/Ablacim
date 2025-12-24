@@ -49,16 +49,11 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 
-import streamlit as st
-def get_secret(name: str):
-    return st.secrets.get(name) or os.getenv(name)
-
-
 # --- API Anahtarı ---
-OPENAI_API_KEY: str = get_secret("OPENAI_API_KEY")
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY","")
 
 # --- MongoDB Ayarları ---
-MONGO_URI: str = get_secret("MONGO_URI")
+MONGO_URI: str = os.getenv("MONGO_URI","")
 DB_NAME: str = os.getenv("DB_NAME", "YasaaVisionDB")
 COLLECTION_NAME: str = os.getenv("COLLECTION_NAME", "palmistry_knowledge")
 INDEX_NAME: str = os.getenv("INDEX_NAME", "vector_index")
