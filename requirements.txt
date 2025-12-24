@@ -31,6 +31,12 @@ pymongo>=4.6.0                # MongoDB Python driver
 
 # --- UI ---
 streamlit>=1.30.0             # Web arayüzü
+requests
+Pillow
+
+fastapi
+uvicorn
+python-multipart
 
 # --- Deployment (ileride eklenecek) ---
 # gunicorn>=21.0              # Production WSGI server

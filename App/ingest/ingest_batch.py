@@ -12,22 +12,23 @@ Tarih: 2024
 ============================================
 """
 
-import os
-import logging
-import base64
-from typing import Optional, List
+# ============================================
+# IMPORTS - Gerekli Kütüphaneler
+# ============================================
+import os                                      # İşletim sistemi işlemleri (dosya yolları vb.)
+import logging                                 # Log yönetimi (print yerine profesyonel loglama)
+import base64                                  # Görselleri base64 formatına çevirmek için
+from typing import Optional, List              # Type hints için tip tanımlamaları
 
-import fitz  # PyMuPDF
-from dotenv import load_dotenv
-from marshmallow import missing
-from openai import embeddings
-from pymongo import MongoClient
-from langchain_openai import (
-    ChatOpenAI,
-    OpenAIEmbeddings
+import fitz                                    # PyMuPDF - PDF işleme kütüphanesi
+from dotenv import load_dotenv                 # .env dosyasından değişken okuma
+from pymongo import MongoClient                # MongoDB bağlantısı için driver
+from langchain_openai import (                 # OpenAI entegrasyonları
+    ChatOpenAI,                                # GPT-4o chat modeli
+    OpenAIEmbeddings                           # text-embedding-3-small
 )
-from langchain_core.messages import HumanMessage
-from langchain_mongodb import MongoDBAtlasVectorSearch
+from langchain_core.messages import HumanMessage  # LangChain mesaj formatı
+from langchain_mongodb import MongoDBAtlasVectorSearch  # MongoDB vektör arama
 
 
 # ============================================
@@ -46,7 +47,6 @@ logger = logging.getLogger(__name__)           # Bu modül için logger oluştur
 # ENVIRONMENT DEĞİŞKENLERİ YÜKLEME
 # ============================================
 # .env dosyasını yükle (proje kök dizininde olmalı)
-
 load_dotenv()
 
 # --- API Anahtarları ---
@@ -65,22 +65,40 @@ MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "1000"))                  # Maksim
 
 # --- Dosya Ayarları ---
 PDF_FOLDER: str = os.getenv("PDF_FOLDER", "pdf_storage")                # PDF klasör yolu
-MIN_IMAGE_SIZE: int = int(os.getenv("MIN_IMAGE_SIZE", "3000"))          # Min görsel boyutu (byte)
+MIN_IMAGE_SIZE: int = int(os.getenv("MIN_IMAGE_SIZE", "5000"))          # Min görsel boyutu (byte)
 LOG_INTERVAL: int = int(os.getenv("LOG_INTERVAL", "10"))                # Kaç sayfada bir log basılsın
+
+# --- CHUNK OVERLAP AYARLARI ---
+OVERLAP_SIZE: int = int(os.getenv("OVERLAP_SIZE", "500"))               # Önceki sayfadan kaç karakter alınacak
+"""
+OVERLAP_SIZE: Sayfa sınırlarında bağlam kopukluğunu önler.
+- 500: ~3-4 cümle (önerilen)
+- 1000: ~6-8 cümle (daha fazla bağlam ama daha fazla token)
+- 0: Overlap kapalı
+
+Nasıl çalışır:
+    Sayfa 49'un son 500 karakteri → Sayfa 50'nin başına eklenir
+    Böylece cümle ortasında kopma sorunu çözülür.
+"""
 
 
 # ============================================
 # DOĞRULAMA - Kritik değişkenler var mı?
 # ============================================
-
 def validate_environment() -> bool:
+    """
+    Kritik environment değişkenlerinin varlığını kontrol eder.
 
+    Returns:
+        bool: Tüm değişkenler mevcutsa True, değilse False
+    """
+    # Kontrol edilecek kritik değişkenler
     required_vars = {
-        "OPENAI_API_KEY" : OPENAI_API_KEY,
-        "MONGO_URI" : MONGO_URI,
+        "OPENAI_API_KEY": OPENAI_API_KEY,
+        "MONGO_URI": MONGO_URI
     }
 
-    missing = [] # Eksik değişkenleri tutacak liste
+    missing = []  # Eksik değişkenleri topla
 
     for var_name, var_value in required_vars.items():
         if not var_value:
@@ -99,124 +117,170 @@ def validate_environment() -> bool:
 # ============================================
 # MODEL İNİTİALİZASYONU
 # ============================================
-
 def initialize_models() -> tuple[ChatOpenAI, OpenAIEmbeddings]:
+    """
+    OpenAI modellerini başlatır.
 
+    Returns:
+        tuple: (ChatOpenAI instance, OpenAIEmbeddings instance)
+    """
     logger.info(f"🤖 Modeller yükleniyor: Vision={VISION_MODEL}, Embedding={EMBEDDING_MODEL}")
 
-    # GPT-4o Vision modeli
+    # GPT-4o Vision modeli (görsel analiz için)
     llm = ChatOpenAI(
-        model=VISION_MODEL,
-        api_key=OPENAI_API_KEY,
-        max_tokens=MAX_TOKENS
+        model=VISION_MODEL,           # gpt-4o
+        api_key=OPENAI_API_KEY,       # API anahtarı
+        max_tokens=MAX_TOKENS         # Maksimum çıktı token sayısı
     )
 
-    # Embedding modeli
+    # Embedding modeli (vektörleştirme için)
     embeddings = OpenAIEmbeddings(
-        model=EMBEDDING_MODEL,
-        api_key=OPENAI_API_KEY
+        model=EMBEDDING_MODEL,        # text-embedding-3-small
+        api_key=OPENAI_API_KEY        # API anahtarı
     )
 
     logger.info("✅ Modeller başarıyla yüklendi")
     return llm, embeddings
 
+
 # ============================================
 # MONGODB VECTOR STORE BAĞLANTISI
 # ============================================
-
 def get_vector_store(embeddings: OpenAIEmbeddings) -> MongoDBAtlasVectorSearch:
+    """
+    MongoDB Atlas Vector Store bağlantısını oluşturur.
 
+    Args:
+        embeddings: OpenAI embedding modeli instance'ı
+
+    Returns:
+        MongoDBAtlasVectorSearch: Vektör store instance'ı
+    """
     logger.info(f"🔌 MongoDB'ye bağlanılıyor: {DB_NAME}/{COLLECTION_NAME}")
 
-    # Client oluştur
+    # MongoDB client oluştur
     client = MongoClient(MONGO_URI)
 
-    # Collection referansı
+    # Collection referansını al
     collection = client[DB_NAME][COLLECTION_NAME]
 
+    # Vector store oluştur
     vector_store = MongoDBAtlasVectorSearch(
-        collection=collection,
-        embedding=embeddings,
-        index_name=INDEX_NAME
+        collection=collection,        # MongoDB collection
+        embedding=embeddings,         # Embedding modeli
+        index_name=INDEX_NAME         # Atlas Search index adı
     )
 
-    logger.info("✅ MongoDB bağlantısı başarılı")
+    logger.info("✅ MongoDB bağlantısı kuruldu")
     return vector_store
 
 
 # ============================================
 # GÖRSEL ANALİZ FONKSİYONU (GPT-4o Vision)
 # ============================================
+def analyze_image_with_vision(
+    llm: ChatOpenAI,
+    image_bytes: bytes
+) -> str:
+    """
+    Bir görseli GPT-4o Vision modeli ile analiz eder.
+    El falı diyagramlarını teknik olarak açıklar.
 
-def analyze_image_with_vision(llm: ChatOpenAI, image_bytes: bytes) -> str:
+    Args:
+        llm: ChatOpenAI instance (GPT-4o)
+        image_bytes: Görselin binary verisi
 
-    base64_image = base64.b64encode(image_bytes).decode("utf-8")
+    Returns:
+        str: Görselin teknik açıklaması
+    """
+    # Görseli base64 formatına çevir (API için gerekli)
+    base64_image = base64.b64encode(image_bytes).decode('utf-8')
 
+    # Vision analiz prompt'u
+    # NOT: Yorum değil, sadece teknik betimleme istenmiş
     vision_prompt = """
     **ROLE:** Expert Chiromancy (Palmistry) Archivist.
-
+    
     **TASK:** Analyze this scientific diagram from a palmistry book.
-
+    
     **INSTRUCTIONS:**
     1. Identify the specific line, mount, or hand shape shown.
     2. Describe length, depth, curvature of lines technically.
     3. Locate Marks (Stars, Crosses, Islands) relative to mounts accurately.
     4. Read any labels (A, B, C, numbers) if present in the diagram.
     5. Note any arrows or directional indicators.
-
+    
     **OUTPUT FORMAT:** 
     A single detailed paragraph description. 
     Technical facts only - NO interpretations or predictions.
     Describe as if explaining to a blind person.
     """
 
+    # LangChain mesaj formatında hazırla
     message = HumanMessage(
         content=[
-            {"type": "text", "text": vision_prompt},
+            {"type": "text", "text": vision_prompt},  # Metin talimatı
             {
                 "type": "image_url",
                 "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
+                    "url": f"data:image/jpeg;base64,{base64_image}"  # Base64 görsel
                 }
             },
         ]
     )
 
+    # API çağrısı - hata yakalama ile
     try:
         response = llm.invoke([message])
         return response.content
     except Exception as e:
         logger.error(f"❌ Görsel analiz hatası: {e}")
-        return "[GÖRSEL ANALİZ BAŞARISIZ - API HATASI]"
+        return "[GÖRSEL ANALİZ BAŞARISIZ - API Hatası]"
 
 
 # ============================================
 # SAYFA İŞLEME FONKSİYONU
 # ============================================
-
 def process_page(
-        page: fitz.Page,
-        page_number: int,
-        doc: fitz.Document,
-        llm: ChatOpenAI,
+    page: fitz.Page,
+    page_number: int,
+    doc: fitz.Document,
+    llm: ChatOpenAI
 ) -> Optional[str]:
+    """
+    Tek bir PDF sayfasını işler: metin + görseller.
 
+    Args:
+        page: PyMuPDF sayfa objesi
+        page_number: Sayfa numarası (1'den başlar)
+        doc: PDF doküman objesi (görsel çıkarmak için)
+        llm: ChatOpenAI instance
+
+    Returns:
+        Optional[str]: Birleştirilmiş içerik veya None
+    """
+    # --- Metin Çıkarma ---
     text_content = page.get_text()
 
-    image_list = page.get_images(full=True)
-    visual_descriptions: List[str] = []
+    # --- Görsel Çıkarma ve Analiz ---
+    image_list = page.get_images(full=True)  # Sayfadaki tüm görseller
+    visual_descriptions: List[str] = []       # Görsel açıklamaları toplayacak liste
 
+    # Her görseli işle
     for img_index, img in enumerate(image_list):
-        xref = img[0]
+        xref = img[0]  # Görsel referans ID'si
 
         try:
+            # Görseli çıkar
             base_image = doc.extract_image(xref)
             image_bytes = base_image["image"]
 
+            # --- FİLTRELEME: Küçük görselleri atla (logo, ikon vb.) ---
             if len(image_bytes) < MIN_IMAGE_SIZE:
                 logger.debug(f"   ⏭️ Küçük görsel atlandı: {len(image_bytes)} bytes")
                 continue
 
+            # GPT-4o ile analiz et
             logger.info(f"   🖼️ Sayfa {page_number} - Görsel {img_index + 1} analiz ediliyor...")
             description = analyze_image_with_vision(llm, image_bytes)
             visual_descriptions.append(f"[DIAGRAM {img_index + 1}]: {description}")
@@ -227,15 +291,15 @@ def process_page(
 
     # --- İçerik Birleştirme ---
     # Format: Sayfa metni + Görsel açıklamaları
-
     combined_content = f"--- PAGE {page_number} START ---\n"
     combined_content += f"{text_content}\n"
 
+    # Görsel açıklamaları varsa ekle
     if visual_descriptions:
         combined_content += "\n--- VISUAL CONTENTS ---\n"
         combined_content += "\n".join(visual_descriptions)
 
-    combined_content += f"\n--- PAGE {page_number} END ---\n"
+    combined_content += f"\n--- PAGE {page_number} END ---"
 
     # Çok kısa içerikleri atla (boş sayfalar vb.)
     if len(combined_content.strip()) < 50:
@@ -245,11 +309,33 @@ def process_page(
 
 
 # ============================================
-# PDF İŞLEME FONKSİYONU (Ana Fonksiyon)
+# PDF İŞLEME FONKSİYONU (OVERLAP DESTEKLİ)
 # ============================================
+def process_pdf(
+    pdf_path: str,
+    llm: ChatOpenAI,
+    embeddings: OpenAIEmbeddings
+) -> int:
+    """
+    Tek bir PDF dosyasını OVERLAP (örtüşme) desteğiyle işler.
 
-def process_pdf(pdf_path: str, llm: ChatOpenAI, embeddings: OpenAIEmbeddings) -> int:
+    OVERLAP NEDİR?
+    Sayfa 49'un sonu: "...akıl çizgisi çatallı ise bu kişi..."
+    Sayfa 50'nin başı: "[Önceki sayfadan:] ...çatallı ise bu kişi..." + "...yaratıcı düşünce..."
 
+    Bu sayede:
+    - Cümle ortasında kopma sorunu çözülür
+    - Embedding modeli bağlamı anlar
+    - Arama kalitesi artar
+
+    Args:
+        pdf_path: PDF dosyasının tam yolu
+        llm: ChatOpenAI instance
+        embeddings: OpenAIEmbeddings instance
+
+    Returns:
+        int: Başarıyla kaydedilen sayfa sayısı
+    """
     file_name = os.path.basename(pdf_path)
 
     # Dosya varlık kontrolü
@@ -257,31 +343,115 @@ def process_pdf(pdf_path: str, llm: ChatOpenAI, embeddings: OpenAIEmbeddings) ->
         logger.error(f"❌ Dosya bulunamadı: {pdf_path}")
         return 0
 
+    # Vector store bağlantısı al
     vector_store = get_vector_store(embeddings)
 
+    # PDF'i aç
     doc = fitz.open(pdf_path)
     total_pages = len(doc)
     saved_count = 0
 
     logger.info(f"📘 KİTAP İŞLENİYOR: '{file_name}' ({total_pages} sayfa)")
+    logger.info(f"   🔗 Overlap aktif: {OVERLAP_SIZE} karakter")
 
+    # ==========================================
+    # OVERLAP İÇİN HAFIZA DEĞİŞKENİ
+    # ==========================================
+    # Bir önceki sayfanın son kısmını burada tutuyoruz
+    previous_page_text_tail: str = ""
+
+    # Her sayfayı işle
     for page_num, page in enumerate(doc):
         real_page_num = page_num + 1
 
+        # İlerleme logu
         if real_page_num % LOG_INTERVAL == 0 or real_page_num == 1:
             logger.info(f"   ⏳ İşleniyor: Sayfa {real_page_num}/{total_pages}")
 
-        combined_content = process_page(page, real_page_num, doc, llm)
+        # ==========================================
+        # ADIM 1: Mevcut Sayfanın Metnini Al
+        # ==========================================
+        current_page_text = page.get_text()
 
-        if combined_content is None:
+        # ==========================================
+        # ADIM 2: OVERLAP BİRLEŞTİRME
+        # ==========================================
+        # Embedding için kullanılacak metin:
+        # [Önceki Sayfanın Sonu] + [Şu Anki Sayfanın Tamamı]
+
+        text_for_embedding = ""
+
+        # Önceki sayfadan bağlam varsa ekle
+        if previous_page_text_tail and OVERLAP_SIZE > 0:
+            text_for_embedding += f"\n[...Sayfa {real_page_num - 1}'den devam...]\n"
+            text_for_embedding += previous_page_text_tail + "\n"
+            text_for_embedding += "[...Sayfa sonu...]\n\n"
+
+        # Şu anki sayfanın metnini ekle
+        text_for_embedding += current_page_text
+
+        # ==========================================
+        # ADIM 3: BU SAYFANIN SONUNU HAFIZAYA AL
+        # ==========================================
+        # Bir sonraki sayfa için bu sayfanın sonunu sakla
+        if OVERLAP_SIZE > 0:
+            if len(current_page_text) > OVERLAP_SIZE:
+                # Sayfanın son OVERLAP_SIZE karakterini al
+                previous_page_text_tail = current_page_text[-OVERLAP_SIZE:]
+            else:
+                # Sayfa kısaysa tamamını al
+                previous_page_text_tail = current_page_text
+
+        # ==========================================
+        # ADIM 4: GÖRSELLERİ İŞLE
+        # ==========================================
+        image_list = page.get_images(full=True)
+        visual_descriptions: List[str] = []
+
+        for img_index, img in enumerate(image_list):
+            xref = img[0]
+
+            try:
+                base_image = doc.extract_image(xref)
+                image_bytes = base_image["image"]
+
+                # Küçük görselleri atla
+                if len(image_bytes) < MIN_IMAGE_SIZE:
+                    continue
+
+                logger.info(f"   🖼️ Sayfa {real_page_num} - Görsel {img_index + 1} analiz ediliyor...")
+                description = analyze_image_with_vision(llm, image_bytes)
+                visual_descriptions.append(f"[DIAGRAM {img_index + 1}]: {description}")
+
+            except Exception as e:
+                logger.warning(f"   ⚠️ Görsel hatası: {e}")
+                continue
+
+        # ==========================================
+        # ADIM 5: NİHAİ İÇERİK BİRLEŞTİRME
+        # ==========================================
+        combined_content = f"--- PAGE {real_page_num} START ---\n"
+        combined_content += text_for_embedding  # Artık overlap içeriyor!
+
+        if visual_descriptions:
+            combined_content += "\n\n--- VISUAL CONTENTS ---\n"
+            combined_content += "\n".join(visual_descriptions)
+
+        combined_content += f"\n--- PAGE {real_page_num} END ---"
+
+        # Boş sayfa kontrolü
+        if len(combined_content.strip()) < 50:
             continue
 
-        # -- MongoDB'ye kaydetme --
+        # ==========================================
+        # ADIM 6: MongoDB'ye Kaydet
+        # ==========================================
         try:
             metadata = {
                 "source": file_name,
                 "page": real_page_num,
-                "type": "hybrid_book_page"
+                "type": "hybrid_book_page",
+                "has_overlap": OVERLAP_SIZE > 0  # Overlap bilgisi
             }
 
             vector_store.add_texts(
@@ -297,16 +467,24 @@ def process_pdf(pdf_path: str, llm: ChatOpenAI, embeddings: OpenAIEmbeddings) ->
     # PDF'i kapat
     doc.close()
 
-    logger.info(f"✅ TAMAMLANDI: '{file_name}' - {saved_count}/{total_pages} sayfa kaydedildi")
+    logger.info(f"✅ TAMAMLANDI: '{file_name}' - {saved_count}/{total_pages} sayfa (overlap: {OVERLAP_SIZE})")
     return saved_count
 
 
 # ============================================
 # TOPLU İŞLEME FONKSİYONU (Batch Process)
 # ============================================
-
 def batch_process_pdfs(folder_path: str) -> dict:
+    """
+    Bir klasördeki tüm PDF dosyalarını sırayla işler.
 
+    Args:
+        folder_path: PDF klasörünün yolu
+
+    Returns:
+        dict: İşlem özeti {"total_files": X, "total_pages": Y, "errors": [...]}
+    """
+    # Sonuç istatistikleri
     results = {
         "total_files": 0,
         "total_pages": 0,
@@ -331,13 +509,14 @@ def batch_process_pdfs(folder_path: str) -> dict:
     results["total_files"] = len(pdf_files)
     logger.info(f"📂 {len(pdf_files)} adet PDF bulundu")
 
+    # Modelleri başlat (bir kez)
     llm, embeddings = initialize_models()
 
     # Her PDF'i sırayla işle
     for index, pdf_file in enumerate(pdf_files, start=1):
-        logger.info(f"\n{'=' * 50}")
+        logger.info(f"\n{'='*50}")
         logger.info(f"📖 [{index}/{len(pdf_files)}] İşleniyor: {pdf_file}")
-        logger.info(f"{'=' * 50}")
+        logger.info(f"{'='*50}")
 
         full_path = os.path.join(folder_path, pdf_file)
 
@@ -359,7 +538,6 @@ def batch_process_pdfs(folder_path: str) -> dict:
 # ============================================
 # ANA GİRİŞ NOKTASI (Main Entry Point)
 # ============================================
-
 if __name__ == "__main__":
     logger.info("=" * 60)
     logger.info("🔮 YASAA VISION - PDF Ingestion Pipeline Başlatılıyor")
@@ -373,8 +551,8 @@ if __name__ == "__main__":
     # 2. PDF klasör yolunu belirle
     # Not: Script App/ingest/ içinde, PDF'ler App/pdf_storage/ içinde
     script_dir = os.path.dirname(os.path.abspath(__file__))  # Script dizini
-    app_dir = os.path.dirname(script_dir)  # App dizini
-    pdf_folder = os.path.join(app_dir, PDF_FOLDER)  # PDF klasör yolu
+    app_dir = os.path.dirname(script_dir)                     # App dizini
+    pdf_folder = os.path.join(app_dir, PDF_FOLDER)            # PDF klasör yolu
 
     logger.info(f"📁 PDF Klasörü: {pdf_folder}")
 
@@ -396,19 +574,3 @@ if __name__ == "__main__":
 
     logger.info("=" * 60)
     logger.info("🎉 İşlem tamamlandı!")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
