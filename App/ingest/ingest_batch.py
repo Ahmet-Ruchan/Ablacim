@@ -61,11 +61,11 @@ INDEX_NAME: str = os.getenv("INDEX_NAME", "vector_index")               # Vektö
 # --- Model Ayarları ---
 VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o")                 # Görsel analiz modeli
 EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")  # Embedding modeli
-MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "1000"))                  # Maksimum token sayısı
+MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "3000"))                  # Maksimum token sayısı
 
 # --- Dosya Ayarları ---
 PDF_FOLDER: str = os.getenv("PDF_FOLDER", "pdf_storage")                # PDF klasör yolu
-MIN_IMAGE_SIZE: int = int(os.getenv("MIN_IMAGE_SIZE", "5000"))          # Min görsel boyutu (byte)
+MIN_IMAGE_SIZE: int = int(os.getenv("MIN_IMAGE_SIZE", "3000"))          # Min görsel boyutu (byte)
 LOG_INTERVAL: int = int(os.getenv("LOG_INTERVAL", "10"))                # Kaç sayfada bir log basılsın
 
 # --- CHUNK OVERLAP AYARLARI ---
