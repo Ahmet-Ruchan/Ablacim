@@ -13,17 +13,22 @@ Düğümler:
 Her düğüm bu state'i okur, işler ve günceller.
 Bir nevi "koşucu" gibi düşün - her düğüm topu alır,
 kendi işini yapar ve bir sonrakine paslar.
+
+Yazar: Ahmet Ruçhan
+Tarih: 2024
 ============================================
 """
 
+# ============================================
+# IMPORTS - Gerekli Kütüphaneler
+# ============================================
 from typing import (
-    TypedDict,
-    List,
-    Optional,
-    Annotated
+    TypedDict,      # Tip güvenli dictionary tanımı için
+    List,           # Liste tipi için
+    Optional,       # Opsiyonel (None olabilir) tipler için
+    Annotated       # LangGraph için özel annotasyonlar
 )
-
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage  # Chat mesaj tipi
 
 
 # ============================================
@@ -64,12 +69,12 @@ class AgentState(TypedDict):
     """
     Kullanıcının gönderdiği el fotoğrafı.
     Base64 formatında encode edilmiş string.
-
+    
     Neden Base64?
     - Binary veriyi text olarak taşımak için
     - API'lere göndermek için standart format
     - JSON içinde taşınabilir
-
+    
     None olabilir: Kullanıcı sadece soru soruyorsa resim olmayabilir.
     """
 
@@ -80,14 +85,14 @@ class AgentState(TypedDict):
     visual_analysis_report: Optional[str]
     """
     GPT-4o Vision'ın el hakkındaki teknik raporu.
-
+    
     Örnek içerik:
     "Hand Shape: Square type based on equal palm width and finger length.
      Life Line: Deep and curved, extending around Mount of Venus.
      Head Line: Straight, ending near Mount of Moon.
      Heart Line: Curved, terminating under Mount of Jupiter.
      Prominent Mounts: Venus (padded), Jupiter (raised)."
-
+    
     NOT: Bu rapor YORUM içermez, sadece gözlem içerir.
     Yorumu Abla yapacak.
     """
@@ -99,16 +104,16 @@ class AgentState(TypedDict):
     retrieved_documents: List[str]
     """
     MongoDB'den semantic search ile bulunan kitap sayfaları.
-
+    
     Gözcü'nün raporundaki terimler (örn: "deep life line")
     kullanılarak veritabanında arama yapılır.
-
+    
     Örnek:
     [
         "--- PAGE 322 ---\nThe deep Life line indicates...",
         "--- PAGE 145 ---\nWhen the Mount of Venus is padded..."
     ]
-
+    
     Bu bilgiler Abla'ya "akademik kaynak" olarak verilir.
     """
 
@@ -119,13 +124,13 @@ class AgentState(TypedDict):
     final_response: Optional[str]
     """
     Kullanıcıya dönecek son cevap.
-
+    
     Abla persona'sı ile yazılmış, sıcak ve samimi ton.
     "Sandviç Tekniği" uygulanmış:
     - Olumlu giriş
     - Gerçekçi değerlendirme  
     - Motive edici kapanış
-
+    
     Örnek:
     "Ay kuzum, ne güzel bir el! Şimdi bak sana ne diyeceğim...
      Hayat çizgin çok güçlü, demek ki dirençli birisin...
@@ -139,23 +144,23 @@ class AgentState(TypedDict):
     is_hand_detected: bool
     """
     Gönderilen fotoğrafın gerçekten el olup olmadığı.
-
+    
     True: Evet, bu bir el fotoğrafı → Analize devam et
     False: Hayır, el değil (kedi, manzara vb.) → Kullanıcıyı uyar
-
+    
     Router düğümü bu flag'e bakarak akışı yönlendirir.
     """
 
     error_message: Optional[str]
     """
     Herhangi bir hata durumunda kullanıcıya gösterilecek mesaj.
-
+    
     Olası durumlar:
     - Resim okunamadı
     - API hatası
     - El tespit edilemedi
     - Veritabanı bağlantı sorunu
-
+    
     None ise: Her şey yolunda, hata yok.
     """
 
@@ -164,8 +169,8 @@ class AgentState(TypedDict):
 # STATE BAŞLATMA YARDIMCI FONKSİYONU
 # ============================================
 def create_initial_state(
-        user_message: str = "",
-        image_bytes: Optional[str] = None
+    user_message: str = "",
+    image_bytes: Optional[str] = None
 ) -> AgentState:
     """
     Yeni bir graph çalıştırması için başlangıç state'i oluşturur.
@@ -197,52 +202,9 @@ def create_initial_state(
     return AgentState(
         messages=initial_messages,
         user_image_bytes=image_bytes,
-        visual_analysis_report=None,  # Henüz analiz yapılmadı
-        retrieved_documents=[],  # Henüz arama yapılmadı
-        final_response=None,  # Henüz cevap oluşturulmadı
-        is_hand_detected=False,  # Henüz kontrol edilmedi
-        error_message=None  # Henüz hata yok
+        visual_analysis_report=None,      # Henüz analiz yapılmadı
+        retrieved_documents=[],            # Henüz arama yapılmadı
+        final_response=None,               # Henüz cevap oluşturulmadı
+        is_hand_detected=False,            # Henüz kontrol edilmedi
+        error_message=None                 # Henüz hata yok
     )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

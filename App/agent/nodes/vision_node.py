@@ -59,7 +59,7 @@ OPENAI_API_KEY: str = get_secret("OPENAI_API_KEY")
 
 # --- Model Ayarları ---
 VISION_MODEL: str = os.getenv("VISION_MODEL", "gpt-4o")
-VISION_MAX_TOKENS: int = int(os.getenv("VISION_MAX_TOKENS", "1000"))
+VISION_MAX_TOKENS: int = int(os.getenv("VISION_MAX_TOKENS", "4000"))
 
 
 # ============================================

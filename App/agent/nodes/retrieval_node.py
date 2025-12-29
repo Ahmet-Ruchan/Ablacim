@@ -16,6 +16,9 @@ Görev:
 
 Akış:
     Gözcü Raporu → Embedding → Similarity Search → Sonuçlar
+
+Yazar: Ahmet Ruçhan
+Tarih: 2024
 ============================================
 """
 
@@ -48,21 +51,12 @@ logger = logging.getLogger(__name__)
 # .env dosyasını yükle
 load_dotenv()
 
-import streamlit as st
-def get_secret(name: str):
-    return st.secrets.get(name) or os.getenv(name)
-
 # --- API Anahtarı ---
-#OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY","")
-OPENAI_API_KEY: str = get_secret("OPENAI_API_KEY")
-
+OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 
 # --- MongoDB Ayarları ---
-MONGO_URI: str = get_secret("MONGO_URI")
-#MONGO_URI: str = os.getenv("MONGO_URI","")
-
+MONGO_URI: str = os.getenv("MONGO_URI", "")
 DB_NAME: str = os.getenv("DB_NAME", "YasaaVisionDB")
-
 COLLECTION_NAME: str = os.getenv("COLLECTION_NAME", "palmistry_knowledge")
 INDEX_NAME: str = os.getenv("INDEX_NAME", "vector_index")
 
@@ -71,12 +65,16 @@ EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
 # --- RAG Ayarları ---
 RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "5"))
+
+MAX_LENGTH: int = int(os.getenv("MAX_LENGTH", "3000"))  # Gözcü raporu için maksimum karakter limiti
+
 """
 RAG_TOP_K: Kaç adet sonuç getirilecek?
 - Düşük (3): Hızlı, az bağlam
 - Yüksek (10): Yavaş, çok bağlam
 - Önerilen: 5 (denge)
 """
+
 
 # ============================================
 # VECTOR STORE BAĞLANTISI
@@ -159,7 +157,7 @@ def _prepare_search_query(vision_report: str) -> str:
     # İleride: Anahtar terimleri çıkarma, özetleme eklenebilir
 
     # Çok uzun raporları kırp (token limiti için)
-    max_length = 1000  # Karakter limiti
+    max_length = MAX_LENGTH  # Karakter limiti
     if len(vision_report) > max_length:
         logger.warning(f"   ⚠️ Rapor çok uzun ({len(vision_report)} karakter), kırpılıyor...")
         return vision_report[:max_length]
@@ -268,7 +266,7 @@ def retrieval_node(state: AgentState) -> Dict[str, Any]:
         source = doc.metadata.get("source", "Bilinmeyen")
         page = doc.metadata.get("page", "?")
 
-        logger.debug(f"   📖 Sonuç {i + 1}: {source} - Sayfa {page}")
+        logger.debug(f"   📖 Sonuç {i+1}: {source} - Sayfa {page}")
 
         # İçeriği listeye ekle
         retrieved_contents.append(doc.page_content)
@@ -342,36 +340,3 @@ if __name__ == "__main__":
 
     # Testi çalıştır
     _test_retrieval_node()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

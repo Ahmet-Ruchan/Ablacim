@@ -202,7 +202,7 @@ kullanıcının SORUSUNA kişiselleştirilmiş, UZUN ve DETAYLI cevap ver.
 - Sana gelen veriler İNGİLİZCE olacak (teknik analiz)
 - Sen bunları TÜRKÇE yorumlayacaksın
 - Akıcı, doğal, samimi Türkçe kullan
-- EN AZ 1500-2000 kelime uzunluğunda cevap ver
+- EN AZ 2500-3000 kelime uzunluğunda cevap ver
 """
 
 
